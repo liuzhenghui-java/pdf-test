@@ -27,9 +27,9 @@ public class ITextPdfUtil {
 
     public static void main(String[] args) throws Exception {
         String source = "C:\\Users\\11712\\Desktop\\刘郑辉简历.pdf";
-        String target = "E:\\刘郑辉简历打码版6.pdf";
+        String target = "E:\\刘郑辉简历打码版13.pdf";
         //关键字之后替换,仅仅支持关键字之后的100范围内的文字覆盖，超出范围将覆盖不到
-        ITextPdfUtil.stringReplace(source, target, "刘郑辉",50,"*****");
+        ITextPdfUtil.stringReplace(source, target, "Spring", 50, "*****");
 
     }
 
@@ -37,13 +37,13 @@ public class ITextPdfUtil {
      * @Description : 字符串替换
      * @Author : mabo
      * maxDistance 字符之间最大距离
-    */
-    public static boolean stringReplace(String source, String target, String keyword,float maxDistance,String replace) throws Exception{
-        boolean success =false;
+     */
+    public static boolean stringReplace(String source, String target, String keyword, float maxDistance, String replace) throws Exception {
+        boolean success = false;
         List<String> keywords = new ArrayList<>();
         keywords.add(keyword);
         success = manipulatePdf(source, target, keywords, replace);
-        if (!success){
+        if (!success) {
             success = compareText(source, target, keyword, maxDistance, replace);
         }
         return success;
@@ -55,29 +55,26 @@ public class ITextPdfUtil {
      * @Author : mabo
      * maxDistance 字符之间最大距离
      */
-    public static boolean afterKeyReplace(String source, String target, String keyword,float maxDistance,String replace) throws Exception{
-        boolean success =false;
+    public static boolean afterKeyReplace(String source, String target, String keyword, float maxDistance, String replace) throws Exception {
+        boolean success = false;
         List<String> keywords = new ArrayList<>();
         keywords.add(keyword);
         success = manipulatePdfAfterKey(source, target, keywords, replace);
-        if (!success){
+        if (!success) {
             success = compareTextAfterKey(source, target, keyword, maxDistance, replace);
         }
         return success;
     }
 
 
-
-
     /**
      * @Author mabo
-     * @Description
-     * 由于部分pdf文字会被分割
+     * @Description 由于部分pdf文字会被分割
      * 采用如下文字分割方式，寻找距离最近的字符再进行匹配
      */
 
-    public static boolean compareText(String src, String dest, String keyword,float maxDistance,String replace) throws Exception {
-        boolean success=false;
+    public static boolean compareText(String src, String dest, String keyword, float maxDistance, String replace) throws Exception {
+        boolean success = false;
         PdfReader pdfReader = null;
         PdfStamper stamper = null;
         try {
@@ -85,57 +82,56 @@ public class ITextPdfUtil {
             stamper = new PdfStamper(pdfReader, new FileOutputStream(dest));
             char[] chars = keyword.toCharArray();
             HashMap<String, List<PdfBDO>> textMap = new HashMap<>();
-            for (char c: chars) {
+            for (char c : chars) {
                 String s = String.valueOf(c);
                 List<PdfBDO> textLineModes = renderText(pdfReader, s);
-                textMap.put(s,textLineModes);
+                textMap.put(s, textLineModes);
             }
             List<PdfBDO> textLineModes = textMap.get(String.valueOf(chars[0]));
-            Map<Float,Float> mapY = new HashMap<>();
-            for (PdfBDO textLineMode: textLineModes) {
+            Map<Float, Float> mapY = new HashMap<>();
+            for (PdfBDO textLineMode : textLineModes) {
                 //根据首字符 找出同一行的文字
                 float y = textLineMode.getY();
                 float x = textLineMode.getX();
-                mapY.put(y,x);
+                mapY.put(y, x);
             }
             Set<Float> floats = mapY.keySet();
             Iterator<Float> iterator = floats.iterator();
-            HashMap<Float, Map<String,PdfBDO>> keyYMap = new HashMap<>();
-            while (iterator.hasNext()){
+            HashMap<Float, Map<String, PdfBDO>> keyYMap = new HashMap<>();
+            while (iterator.hasNext()) {
                 Float y = iterator.next();
                 Float x = mapY.get(y);
                 HashMap<String, PdfBDO> tMap = new HashMap<>();
                 for (int i = 0; i < chars.length; i++) {
-                    char c=chars[i];
+                    char c = chars[i];
                     List<PdfBDO> textLineModes1 = textMap.get(String.valueOf(c));
                     for (PdfBDO t : textLineModes1) {
-                        if (t.getY()==y){
+                        if (t.getY() == y) {
                             //判断两文字之间的具体是否符合要求
                             float x1 = t.getX();
                             float absoluteValue = getAbsoluteValue(x1, x);
-                            if (absoluteValue<maxDistance){
+                            if (absoluteValue < maxDistance) {
                                 Object o = tMap.get(String.valueOf(c));
-                                if (o!=null){
+                                if (o != null) {
                                     PdfBDO o1 = (PdfBDO) o;
-                                    if (getAbsoluteValue(o1.getX(),x)>absoluteValue){
-                                        tMap.put(String.valueOf(c),t);
+                                    if (getAbsoluteValue(o1.getX(), x) > absoluteValue) {
+                                        tMap.put(String.valueOf(c), t);
                                     }
-                                }
-                                else {
-                                    tMap.put(String.valueOf(c),t);
+                                } else {
+                                    tMap.put(String.valueOf(c), t);
                                 }
                             }
                         }
                     }
                 }
-                keyYMap.put(y,tMap);
+                keyYMap.put(y, tMap);
             }
             Set<Float> keySet = keyYMap.keySet();
             Iterator<Float> iterator1 = keySet.iterator();
-            while (iterator1.hasNext()){
+            while (iterator1.hasNext()) {
                 Float next = iterator1.next();
-                Map<String,PdfBDO> map = keyYMap.get(next);
-                if (map.size()==chars.length){
+                Map<String, PdfBDO> map = keyYMap.get(next);
+                if (map.size() == chars.length) {
                     PdfBDO t = map.get(String.valueOf(chars[0]));
 
 
@@ -147,7 +143,7 @@ public class ITextPdfUtil {
                     int curPage = t.getCurPage();
 
                     Rectangle rectangle = new Rectangle(x, y,
-                            width, height);
+                            x + width - 2, y + height - 2);
                     PdfCleanUpLocation pdfCleanUpLocation = new PdfCleanUpLocation(curPage, rectangle, BaseColor.WHITE);
                     PdfCleanUpProcessor cleaner = new PdfCleanUpProcessor(Collections.singletonList(pdfCleanUpLocation), stamper);
                     cleaner.cleanUp();
@@ -172,7 +168,7 @@ public class ITextPdfUtil {
 //                    canvas.endText();
 //                    canvas.fill();
 //                    canvas.restoreState();
-                    success=true;
+                    success = true;
                 }
             }
         } catch (FileNotFoundException e) {
@@ -187,15 +183,16 @@ public class ITextPdfUtil {
         }
         return success;
     }
+
     /**
      * @Description : 功能说明
      * 由于部分pdf文字会被分割
      * 采用如下文字分割方式，寻找距离最近的字符再进行匹配
      * 匹配后对该字符串后面的文字进行脱敏
-    */
+     */
 
-    public static boolean compareTextAfterKey(String src, String dest, String keyword,float maxDistance,String replace) throws Exception {
-        boolean success=false;
+    public static boolean compareTextAfterKey(String src, String dest, String keyword, float maxDistance, String replace) throws Exception {
+        boolean success = false;
         PdfReader pdfReader = null;
         PdfStamper stamper = null;
         try {
@@ -203,58 +200,57 @@ public class ITextPdfUtil {
             stamper = new PdfStamper(pdfReader, new FileOutputStream(dest));
             char[] chars = keyword.toCharArray();
             HashMap<String, List<PdfBDO>> textMap = new HashMap<>();
-            for (char c: chars) {
+            for (char c : chars) {
                 String s = String.valueOf(c);
                 List<PdfBDO> textLineModes = renderText(pdfReader, s);
-                textMap.put(s,textLineModes);
+                textMap.put(s, textLineModes);
             }
             List<PdfBDO> textLineModes = textMap.get(String.valueOf(chars[0]));
-            Map<Float,Float> mapY = new HashMap<>();
-            for (PdfBDO textLineMode: textLineModes) {
+            Map<Float, Float> mapY = new HashMap<>();
+            for (PdfBDO textLineMode : textLineModes) {
                 //根据首字符 找出同一行的文字
                 float y = textLineMode.getY();
                 float x = textLineMode.getX();
-                mapY.put(y,x);
+                mapY.put(y, x);
             }
             Set<Float> floats = mapY.keySet();
             Iterator<Float> iterator = floats.iterator();
-            HashMap<Float, Map<String,PdfBDO>> keyYMap = new HashMap<>();
-            while (iterator.hasNext()){
+            HashMap<Float, Map<String, PdfBDO>> keyYMap = new HashMap<>();
+            while (iterator.hasNext()) {
                 Float y = iterator.next();
                 Float x = mapY.get(y);
                 HashMap<String, PdfBDO> tMap = new HashMap<>();
                 for (int i = 0; i < chars.length; i++) {
-                    char c=chars[i];
+                    char c = chars[i];
                     List<PdfBDO> textLineModes1 = textMap.get(String.valueOf(c));
                     for (PdfBDO t : textLineModes1) {
-                        if (t.getY()==y){
+                        if (t.getY() == y) {
                             //判断两文字之间的具体是否符合要求
                             float x1 = t.getX();
                             float absoluteValue = getAbsoluteValue(x1, x);
-                            if (absoluteValue<maxDistance){
+                            if (absoluteValue < maxDistance) {
                                 Object o = tMap.get(String.valueOf(c));
-                                if (o!=null){
+                                if (o != null) {
                                     PdfBDO o1 = (PdfBDO) o;
-                                    if (getAbsoluteValue(o1.getX(),x)>absoluteValue){
-                                        tMap.put(String.valueOf(c),t);
+                                    if (getAbsoluteValue(o1.getX(), x) > absoluteValue) {
+                                        tMap.put(String.valueOf(c), t);
                                     }
-                                }
-                                else {
-                                    tMap.put(String.valueOf(c),t);
+                                } else {
+                                    tMap.put(String.valueOf(c), t);
                                 }
                             }
                         }
                     }
                 }
-                keyYMap.put(y,tMap);
+                keyYMap.put(y, tMap);
             }
             Set<Float> keySet = keyYMap.keySet();
             Iterator<Float> iterator1 = keySet.iterator();
-            while (iterator1.hasNext()){
+            while (iterator1.hasNext()) {
                 Float next = iterator1.next();
-                Map<String,PdfBDO> map = keyYMap.get(next);
-                if (map.size()==chars.length){
-                    PdfBDO t = map.get(String.valueOf(chars[chars.length-1]));
+                Map<String, PdfBDO> map = keyYMap.get(next);
+                if (map.size() == chars.length) {
+                    PdfBDO t = map.get(String.valueOf(chars[chars.length - 1]));
                     float x = t.getX();
                     float y = t.getY();
                     float width = t.getWidth();
@@ -265,23 +261,23 @@ public class ITextPdfUtil {
                     canvas.setColorFill(BaseColor.WHITE);
                     // 以左下点为原点，x轴的值，y轴的值，总宽度，总高度：
                     //开始覆盖内容,实际操作位置
-                    canvas.rectangle(x+width, y, 100, height*1.3);
+                    canvas.rectangle(x + width, y, 100, height * 1.3);
                     canvas.fill();
                     canvas.setColorFill(BaseColor.BLACK);
                     //开始写入文本
                     canvas.beginText();
                     BaseFont bf = BaseFont.createFont("STSong-Light", "UniGB-UCS2-H", BaseFont.EMBEDDED);
-                    Font font = new Font(bf,height,Font.BOLD);
+                    Font font = new Font(bf, height, Font.BOLD);
                     //设置字体和大小
                     canvas.setFontAndSize(font.getBaseFont(), height);
                     //设置字体的输出位置
-                    canvas.setTextMatrix(x+width, y+3);
+                    canvas.setTextMatrix(x + width, y + 3);
                     //要输出的text
-                    canvas.showText(replace) ;
+                    canvas.showText(replace);
                     canvas.endText();
                     canvas.fill();
                     canvas.restoreState();
-                    success=true;
+                    success = true;
                 }
             }
         } catch (FileNotFoundException e) {
@@ -300,10 +296,11 @@ public class ITextPdfUtil {
 
     /**
      * 根据关键字，在其后进行脱敏
+     *
      * @Author : mabo
      */
-    public static boolean manipulatePdfAfterKey(String src, String dest, List<String> keywords,String replace ) throws Exception {
-        boolean success=false;
+    public static boolean manipulatePdfAfterKey(String src, String dest, List<String> keywords, String replace) throws Exception {
+        boolean success = false;
         PdfReader pdfReader = null;
         PdfStamper stamper = null;
         try {
@@ -319,23 +316,23 @@ public class ITextPdfUtil {
                     canvas.setColorFill(BaseColor.WHITE);
                     // 以左下点为原点，x轴的值，y轴的值，总宽度，总高度：
                     //开始覆盖内容,实际操作位置
-                    canvas.rectangle(mode.getX()+ mode.getWidth(), mode.getY(), 100, mode.getHeight()*1.3);
+                    canvas.rectangle(mode.getX() + mode.getWidth(), mode.getY(), 100, mode.getHeight() * 1.3);
                     canvas.fill();
                     canvas.setColorFill(BaseColor.BLACK);
                     //开始写入文本
                     canvas.beginText();
                     BaseFont bf = BaseFont.createFont("STSong-Light", "UniGB-UCS2-H", BaseFont.EMBEDDED);
-                    Font font = new Font(bf,mode.getHeight(),Font.BOLD);
+                    Font font = new Font(bf, mode.getHeight(), Font.BOLD);
                     //设置字体和大小
                     canvas.setFontAndSize(font.getBaseFont(), mode.getHeight());
                     //设置字体的输出位置
-                    canvas.setTextMatrix(mode.getX()+mode.getWidth()+10, mode.getY()+3);
+                    canvas.setTextMatrix(mode.getX() + mode.getWidth() + 10, mode.getY() + 3);
                     //要输出的text
-                    canvas.showText(replace) ;
+                    canvas.showText(replace);
                     canvas.endText();
                     canvas.fill();
                     canvas.restoreState();
-                    success=true;
+                    success = true;
                 }
             }
         } catch (FileNotFoundException e) {
@@ -354,13 +351,12 @@ public class ITextPdfUtil {
     }
 
 
-
     /**
      * @Description : 匹配pdf中的文字，进行替换
      * @Author : mabo
      */
-    public static boolean manipulatePdf(String src, String dest, List<String> keywords,String replace ) throws Exception {
-        boolean success=false;
+    public static boolean manipulatePdf(String src, String dest, List<String> keywords, String replace) throws Exception {
+        boolean success = false;
         PdfReader pdfReader = null;
         PdfStamper stamper = null;
         try {
@@ -393,23 +389,23 @@ public class ITextPdfUtil {
                     // canvas.rectangle(mode.getX() - 1, mode.getY(),
                     // mode.getWidth() + 2, mode.getHeight());
                     //开始覆盖内容,实际操作位置
-                    canvas.rectangle(mode.getX(), mode.getY(), mode.getWidth(), mode.getHeight()*1.3);
+                    canvas.rectangle(mode.getX(), mode.getY(), mode.getWidth(), mode.getHeight() * 1.3);
                     canvas.fill();
                     canvas.setColorFill(BaseColor.BLACK);
                     //开始写入文本
                     canvas.beginText();
                     BaseFont bf = BaseFont.createFont("STSong-Light", "UniGB-UCS2-H", BaseFont.EMBEDDED);
-                    Font font = new Font(bf,mode.getHeight(),Font.BOLD);
+                    Font font = new Font(bf, mode.getHeight(), Font.BOLD);
                     //设置字体和大小
                     canvas.setFontAndSize(font.getBaseFont(), mode.getHeight());
                     //设置字体的输出位置
-                    canvas.setTextMatrix(mode.getX(), mode.getY()+3);
+                    canvas.setTextMatrix(mode.getX(), mode.getY() + 3);
                     //要输出的text
-                    canvas.showText(replace) ;
+                    canvas.showText(replace);
                     canvas.endText();
                     canvas.fill();
                     canvas.restoreState();
-                    success=true;
+                    success = true;
                 }
             }
         } catch (FileNotFoundException e) {
@@ -426,6 +422,7 @@ public class ITextPdfUtil {
         }
         return success;
     }
+
     public static List<PdfBDO> renderText(PdfReader pdfReader, final List<String> keywords) {
         final List<PdfBDO> list = new ArrayList<PdfBDO>();
         try {
@@ -514,39 +511,41 @@ public class ITextPdfUtil {
         }
         return list;
     }
-    public static float getAbsoluteValue(float f1, float f2){
-        if (f1>f2){
-            return f1-f2;
-        }else {
-            return f2-f1;
+
+    public static float getAbsoluteValue(float f1, float f2) {
+        if (f1 > f2) {
+            return f1 - f2;
+        } else {
+            return f2 - f1;
         }
     }
 
 
-    public static File outputStream2File (ByteArrayOutputStream out, File file ) throws IOException {
+    public static File outputStream2File(ByteArrayOutputStream out, File file) throws IOException {
         FileOutputStream fileOutputStream = new FileOutputStream(file.getName());
         fileOutputStream.write(out.toByteArray());
         return file;
     }
-    public File inputStream2File (InputStream in ,File file ) throws IOException {
+
+    public File inputStream2File(InputStream in, File file) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         int ch = 0;
         while ((ch = in.read()) != -1) {
             out.write(ch);
         }
-        outputStream2File(out,file);
+        outputStream2File(out, file);
         return file;
     }
-    public static InputStream File2InputStream (File file ) throws IOException {
+
+    public static InputStream File2InputStream(File file) throws IOException {
         InputStream inputStream = new FileInputStream(file);
         return inputStream;
     }
 
     /**
-     *
      * @param destPath 生成pdf文件的路劲
-     * @param images	需要转换的图片路径的数组
-     *                  imagesToPdf("G:/test333.pdf",new String[]{"G:/test.jpg"});
+     * @param images   需要转换的图片路径的数组
+     *                 imagesToPdf("G:/test333.pdf",new String[]{"G:/test.jpg"});
      * @throws IOException
      * @throws DocumentException
      */
@@ -559,7 +558,7 @@ public class ITextPdfUtil {
         // 第二步：
         // 创建一个PdfWriter实例，
 
-        getInstance(document,new FileOutputStream(destPath));
+        getInstance(document, new FileOutputStream(destPath));
 
         // 第三步：打开文档。
         document.open();
